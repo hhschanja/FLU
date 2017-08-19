@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+  <mapper namespace="ReplyMapper">
+
+  <!-- list, insert, update, delete -->
+  
+  <select id="count" parameterType="java.util.HashMap" resultType="int">
+  	select count(nvl(num,0)) from reply where projectNum=#{project.projectNum}
+  </select>
+    
+    
+  <select id="list" parameterType="java.util.HashMap" resultType="com.flu.reply.ReplyDTO">
+
+       select * from 
+       (select rownum R, P.* from
+       (select * from reply where projectNum=#{project.projectNum} order by ref desc, step asc) P)
+        where R between #{listInfo.startRow} and #{listInfo.lastRow}
+
+  	</select>
+  	
+  
+  
+  <insert id="insert" parameterType="com.flu.reply.ReplyDTO">
+insert into reply (num, writer,contents,reg_date,projectNum,ref,step,depth,replyChk) 
+values (reply_seq.nextval, #{writer}, #{contents}, sysdate, #{projectNum}, reply_seq.nextval,0,0,#{replyChk})
+  </insert>
+
+<!-- 대댓글 넣기 -->
+<!-- 답글누를때, 부모의 num을 자식의 ref에 셋팅하자... -->
+<select id="checkReply" parameterType="com.flu.reply.ReplyDTO" resultType="com.flu.reply.ReplyDTO">
+	select * from reply where num=#{num}
+</select>
+
+<!-- 조건있으면 댓글 업데이트하기 -->
+<!-- #{ref}랑 #{step}은 부모의 ref와 step -->
+<update id="updateReply" parameterType="com.flu.reply.ReplyDTO">
+	update reply set step=step+1 where ref=#{ref} and step>#{step}
+</update>
+
+<!-- 새 답글 등록하기 -->
+<insert id="insertReply" parameterType="java.util.HashMap">
+	insert into reply (num, writer, contents, reg_date, projectNum, ref, step, depth, replyChk)
+	values (reply_seq.nextval, #{reply.writer}, #{reply.contents}, sysdate, #{reply.projectNum}, #{parentreply.ref}, #{parentreply.step}+1, #{parentreply.depth}+1, #{reply.replyChk} )
+</insert> 
+
+
+ 
+ 
+  <update id="update" parameterType="com.flu.reply.ReplyDTO">
+  	update reply set contents=#{contents}, reg_date=sysdate where num=#{num}
+  </update>
+  
+  
+  <delete id="delete" parameterType="java.lang.Integer">
+  	delete reply where num=#{num}
+  </delete>
+ 
+  </mapper>
